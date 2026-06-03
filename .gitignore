@@ -1,0 +1,36 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ---- ROS 2 (colcon) ----
+build/
+install/
+log/
+
+# ---- Gazebo ----
+*.log
+.gazebo/
+
+# ---- Report build artifacts ----
+report/**/*.aux
+report/**/*.out
+report/**/*.toc
+report/**/*.synctex.gz
+report/**/*.fdb_latexmk
+report/**/*.fls
+
+# ---- Captured media (keep these out of git; link in report instead) ----
+*.mp4
+*.bag
+*.db3
+
+# ---- OS / editor ----
+.DS_Store
+.vscode/
+.idea/
