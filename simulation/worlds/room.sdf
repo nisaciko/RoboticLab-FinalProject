@@ -37,6 +37,32 @@
       <render_engine>ogre2</render_engine>
     </plugin>
 
+    <!-- ===== Keyboard teleop: arrow keys -> /cmd_vel =====================
+         Requires the "Key Publisher" GUI widget (top-right vertical-dots menu
+         -> Key Publisher). Then click the 3D view and use the arrow keys.
+         Each press sends one Twist; the robot holds it until you change it.
+         (Down = reverse, Space = stop.) -->
+    <plugin filename="gz-sim-triggered-publisher-system" name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Int32" topic="/keyboard/keypress"><match field="data">16777235</match></input> <!-- Up -->
+      <output type="gz.msgs.Twist" topic="/cmd_vel">linear: {x: 0.5}, angular: {z: 0.0}</output>
+    </plugin>
+    <plugin filename="gz-sim-triggered-publisher-system" name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Int32" topic="/keyboard/keypress"><match field="data">16777237</match></input> <!-- Down -->
+      <output type="gz.msgs.Twist" topic="/cmd_vel">linear: {x: -0.5}, angular: {z: 0.0}</output>
+    </plugin>
+    <plugin filename="gz-sim-triggered-publisher-system" name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Int32" topic="/keyboard/keypress"><match field="data">16777234</match></input> <!-- Left -->
+      <output type="gz.msgs.Twist" topic="/cmd_vel">linear: {x: 0.0}, angular: {z: 0.6}</output>
+    </plugin>
+    <plugin filename="gz-sim-triggered-publisher-system" name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Int32" topic="/keyboard/keypress"><match field="data">16777236</match></input> <!-- Right -->
+      <output type="gz.msgs.Twist" topic="/cmd_vel">linear: {x: 0.0}, angular: {z: -0.6}</output>
+    </plugin>
+    <plugin filename="gz-sim-triggered-publisher-system" name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Int32" topic="/keyboard/keypress"><match field="data">32</match></input> <!-- Space = stop -->
+      <output type="gz.msgs.Twist" topic="/cmd_vel">linear: {x: 0.0}, angular: {z: 0.0}</output>
+    </plugin>
+
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
       <pose>0 0 10 0 0 0</pose>
