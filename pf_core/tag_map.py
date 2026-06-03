@@ -29,18 +29,19 @@ class TagMap:
     def num_tags(self) -> int:
         return self.tags_xy.shape[0]
 
+    # Room is centred at the origin: x in [-3, 3], y in [-2, 2] (interior 6 x 4 m).
+    ROOM_BOUNDS = ((-3.0, 3.0), (-2.0, 2.0))  # (x_range, y_range)
+
     @classmethod
     def default_room(cls) -> "TagMap":
-        """Placeholder 8-tag asymmetric layout for a room.
+        """The 8-tag asymmetric layout — MUST match simulation/worlds/room.sdf.
 
-        TODO(Nisa): replace with the real coordinates that match the Gazebo
-        world once the room is built. These are only so tests/visualisation have
-        something to draw. Room assumed roughly [0, W] x [0, H].
+        2 tags per wall, intentionally asymmetric (no wall mirrors another), so
+        the configuration is locally unique and the filter can converge.
         """
-        # NOTE: intentionally asymmetric (no two walls mirror each other).
         return cls(np.array([
-            [0.0, 0.8], [0.0, 2.6],     # left wall  (x=0)
-            [4.0, 1.2], [4.0, 3.1],     # right wall (x=W)
-            [1.0, 0.0], [2.9, 0.0],     # bottom wall (y=0)
-            [1.5, 4.0], [3.3, 4.0],     # top wall   (y=H)
+            [-2.94, -1.2], [-2.94, 0.8],   # left wall  (x = -3)
+            [ 2.94, -0.5], [ 2.94, 1.4],   # right wall (x = +3)
+            [-2.00, -1.94], [1.00, -1.94], # front wall (y = -2)
+            [-1.00,  1.94], [1.80,  1.94], # back wall  (y = +2)
         ]))

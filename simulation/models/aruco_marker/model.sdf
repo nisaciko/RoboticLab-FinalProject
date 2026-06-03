@@ -1,0 +1,26 @@
+<?xml version="1.0" ?>
+<sdf version="1.10">
+  <!-- 0.2 x 0.2 m ArUco marker plate. Textured face points +X (model frame);
+       rotate each instance so that face looks into the room. All 8 wall tags
+       reuse this one model => identical ID, as the project requires. -->
+  <model name="aruco_marker">
+    <static>true</static>
+    <link name="link">
+      <visual name="marker">
+        <geometry><box><size>0.01 0.2 0.2</size></box></geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0 0 0 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>materials/textures/aruco_0.png</albedo_map>
+              <metalness>0</metalness>
+              <roughness>1</roughness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

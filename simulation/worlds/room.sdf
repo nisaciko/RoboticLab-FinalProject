@@ -8,13 +8,15 @@
 
   Tag (x, y) centers here MUST stay in sync with pf_core/tag_map.py.
 
-  Run:
-    gz sim simulation/worlds/room.sdf
-  Drive (Gazebo Harmonic ships a teleop via the GUI, or publish to /cmd_vel).
+  Run (tags are model://aruco_marker, so the resource path must point at
+  simulation/models):
+    GZ_SIM_RESOURCE_PATH=$PWD/simulation/models gz sim simulation/worlds/room.sdf
+  Drive: publish to /cmd_vel, or add the Teleop GUI widget.
 
-  NOTE(Nisa): the tag markers are currently plain dark plates. For real AprilTag
-  DETECTION we must replace their material with an actual AprilTag texture
-  (tag36h11, same ID on all 8). Tracked as a follow-up.
+  Tags: 8 x model://aruco_marker, all id=0 (DICT_4X4_50), placed asymmetrically.
+  MIRROR CHECK (do this on a machine with GPU/camera): if the marker fails to
+  decode because the visible face is mirrored, horizontally flip the texture in
+  simulation/models/aruco_marker/generate_marker.py (cv2.flip(canvas, 1)).
 -->
 <sdf version="1.10">
   <world name="pf_room">
@@ -92,45 +94,23 @@
       </link>
     </model>
 
-    <!-- ============ 8 AR TAGS (asymmetric, 2 per wall, all same ID) ========
-         tag plate = 0.2 x 0.2, thin axis perpendicular to its wall.
-         Keep these centers identical to pf_core/tag_map.py.            -->
-    <model name="ar_tags">
-      <static>true</static>
-      <link name="tags">
-        <!-- LEFT wall x=-3 (face +x): thin in x -->
-        <visual name="tag1"><pose>-2.94 -1.2 0.5 0 0 0</pose>
-          <geometry><box><size>0.01 0.2 0.2</size></box></geometry>
-          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
-        <visual name="tag2"><pose>-2.94 0.8 0.5 0 0 0</pose>
-          <geometry><box><size>0.01 0.2 0.2</size></box></geometry>
-          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
-
-        <!-- RIGHT wall x=+3 (face -x): thin in x -->
-        <visual name="tag3"><pose>2.94 -0.5 0.5 0 0 0</pose>
-          <geometry><box><size>0.01 0.2 0.2</size></box></geometry>
-          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
-        <visual name="tag4"><pose>2.94 1.4 0.5 0 0 0</pose>
-          <geometry><box><size>0.01 0.2 0.2</size></box></geometry>
-          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
-
-        <!-- FRONT wall y=-2 (face +y): thin in y -->
-        <visual name="tag5"><pose>-2.0 -1.94 0.5 0 0 0</pose>
-          <geometry><box><size>0.2 0.01 0.2</size></box></geometry>
-          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
-        <visual name="tag6"><pose>1.0 -1.94 0.5 0 0 0</pose>
-          <geometry><box><size>0.2 0.01 0.2</size></box></geometry>
-          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
-
-        <!-- BACK wall y=+2 (face -y): thin in y -->
-        <visual name="tag7"><pose>-1.0 1.94 0.5 0 0 0</pose>
-          <geometry><box><size>0.2 0.01 0.2</size></box></geometry>
-          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
-        <visual name="tag8"><pose>1.8 1.94 0.5 0 0 0</pose>
-          <geometry><box><size>0.2 0.01 0.2</size></box></geometry>
-          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
-      </link>
-    </model>
+    <!-- ============ 8 ARUCO TAGS (asymmetric, 2 per wall, all id=0) ========
+         Each is an instance of model://aruco_marker (textured face points +X),
+         rotated so that face looks into the room. Centers MUST match
+         pf_core/tag_map.py. Requires GZ_SIM_RESOURCE_PATH to include
+         simulation/models (see run command in the world header comment).  -->
+    <!-- LEFT wall x=-3 (face +x): yaw 0 -->
+    <include><name>tag1</name><uri>model://aruco_marker</uri><pose>-2.94 -1.2 0.5 0 0 0</pose></include>
+    <include><name>tag2</name><uri>model://aruco_marker</uri><pose>-2.94 0.8 0.5 0 0 0</pose></include>
+    <!-- RIGHT wall x=+3 (face -x): yaw pi -->
+    <include><name>tag3</name><uri>model://aruco_marker</uri><pose>2.94 -0.5 0.5 0 0 3.14159</pose></include>
+    <include><name>tag4</name><uri>model://aruco_marker</uri><pose>2.94 1.4 0.5 0 0 3.14159</pose></include>
+    <!-- FRONT wall y=-2 (face +y): yaw pi/2 -->
+    <include><name>tag5</name><uri>model://aruco_marker</uri><pose>-2.0 -1.94 0.5 0 0 1.5708</pose></include>
+    <include><name>tag6</name><uri>model://aruco_marker</uri><pose>1.0 -1.94 0.5 0 0 1.5708</pose></include>
+    <!-- BACK wall y=+2 (face -y): yaw -pi/2 -->
+    <include><name>tag7</name><uri>model://aruco_marker</uri><pose>-1.0 1.94 0.5 0 0 -1.5708</pose></include>
+    <include><name>tag8</name><uri>model://aruco_marker</uri><pose>1.8 1.94 0.5 0 0 -1.5708</pose></include>
 
     <!-- ===================== DIFF-DRIVE ROBOT + CAMERA ===================== -->
     <model name="robot">
