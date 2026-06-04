@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
+# NB: must run on the SYSTEM python (/usr/bin/python3) — the gz-transport python
+# bindings live in /usr/lib/python3/dist-packages and are NOT visible from a
+# conda env. Run as ./simulation/teleop_key.py (this shebang forces the right
+# interpreter even inside conda).
 """Hold-to-drive keyboard teleop for the Gazebo robot (publishes /cmd_vel).
 
 Unlike the in-GUI Key Publisher (which latches a velocity until you press Space),
@@ -18,6 +22,7 @@ we publish zero. Works on Wayland (no global key listener needed).
 Requires the gz-transport python bindings (ship with Gazebo Harmonic). Run the
 simulation first (./simulation/run.sh), then this script.
 """
+import os
 import sys
 import select
 import termios
@@ -41,11 +46,15 @@ KEYS = {  # key -> (linear x, angular z)
 
 
 def read_keys(timeout):
-    """Return the bytes available on stdin within `timeout` seconds ('' if none)."""
+    """Return the bytes available on stdin within `timeout` seconds ('' if none).
+
+    Uses os.read (NOT sys.stdin.read, which blocks until its full count) so a
+    single keystroke returns immediately and the watchdog can stop the robot.
+    """
     r, _, _ = select.select([sys.stdin], [], [], timeout)
     if not r:
         return ""
-    return sys.stdin.read(16)  # drain whatever is buffered (handles auto-repeat)
+    return os.read(sys.stdin.fileno(), 64).decode(errors="ignore")  # whatever's buffered
 
 
 def main():
