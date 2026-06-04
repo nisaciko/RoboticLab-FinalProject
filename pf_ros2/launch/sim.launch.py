@@ -11,9 +11,19 @@ from launch import LaunchDescription
 from launch.actions import ExecuteProcess, SetEnvironmentVariable
 from launch_ros.actions import Node
 
-_REPO = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+def _find_repo_root():
+    """Walk up from this file to the dir holding simulation/worlds/room.sdf.
+    Works whether the launch runs from source or from install/ (copy or symlink),
+    since install/ lives inside the repo root."""
+    d = os.path.dirname(os.path.realpath(__file__))
+    while d != '/':
+        if os.path.exists(os.path.join(d, 'simulation', 'worlds', 'room.sdf')):
+            return d
+        d = os.path.dirname(d)
+    raise RuntimeError('repo root (simulation/worlds/room.sdf) not found')
 
+
+_REPO = _find_repo_root()
 _WORLD = os.path.join(_REPO, 'simulation', 'worlds', 'room.sdf')
 _MODELS = os.path.join(_REPO, 'simulation', 'models')
 
@@ -25,11 +35,16 @@ def generate_launch_description():
         SetEnvironmentVariable('PYTHONPATH',
             _REPO + ':' + os.environ.get('PYTHONPATH', '')),
 
-        # Gazebo Harmonic
+        # Gazebo Harmonic — '-r' starts the sim RUNNING (not paused)
         SetEnvironmentVariable('GZ_SIM_RESOURCE_PATH', _MODELS),
         ExecuteProcess(
-            cmd=['gz', 'sim', _WORLD],
+            cmd=['gz', 'sim', '-r', _WORLD],
             output='screen'),
+
+        # Static TF so RViz knows the 'odom' frame (markers are published in it)
+        Node(package='tf2_ros', executable='static_transform_publisher',
+             arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+             output='screen'),
 
         # ROS ↔ Gazebo bridge
         # format:  topic@ros_type[gz_type   (gz→ros)

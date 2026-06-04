@@ -28,6 +28,28 @@ _DICT   = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
 _PARAMS = aruco.DetectorParameters()
 _DETECTOR = aruco.ArucoDetector(_DICT, _PARAMS)
 
+# Marker corner object points (centred, z=0), in detectMarkers() order:
+# top-left, top-right, bottom-right, bottom-left.
+_OBJP = np.array([[-_TAG_SIZE / 2,  _TAG_SIZE / 2, 0],
+                  [ _TAG_SIZE / 2,  _TAG_SIZE / 2, 0],
+                  [ _TAG_SIZE / 2, -_TAG_SIZE / 2, 0],
+                  [-_TAG_SIZE / 2, -_TAG_SIZE / 2, 0]], dtype=np.float32)
+
+
+def _marker_tvecs(corners):
+    """Translation of each marker in the camera frame.
+
+    Replaces cv2.aruco.estimatePoseSingleMarkers (removed in OpenCV 4.7+) with
+    solvePnP + IPPE_SQUARE, the method OpenCV recommends for square markers.
+    """
+    tvecs = []
+    for c in corners:
+        ok, _rvec, tvec = cv2.solvePnP(_OBJP, c[0], _CAM_MATRIX, _DIST,
+                                       flags=cv2.SOLVEPNP_IPPE_SQUARE)
+        if ok:
+            tvecs.append(tvec.reshape(3))
+    return tvecs
+
 
 class AprilTagObsNode(Node):
     def __init__(self):
@@ -48,11 +70,8 @@ class AprilTagObsNode(Node):
 
         flat = []
         if ids is not None and len(corners):
-            rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(
-                corners, _TAG_SIZE, _CAM_MATRIX, _DIST)
-            for tvec in tvecs:
-                tx, _ty, tz = tvec[0]
-                # camera frame: z forward, x right
+            for tvec in _marker_tvecs(corners):
+                tx, _ty, tz = tvec       # camera frame: z forward, x right
                 r = float(np.hypot(tx, tz))
                 b = float(np.arctan2(-tx, tz))          # left positive
                 b = float(np.arctan2(np.sin(b), np.cos(b)))
