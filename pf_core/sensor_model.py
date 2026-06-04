@@ -31,10 +31,38 @@ def observation_likelihood(particles: np.ndarray, observations, tag_map,
         observations in a frame, combine per-observation likelihoods (assume
         conditional independence → product, or sum of log-likelihoods).
 
-    TODO(Yahya):
-      1. For each particle, predict the (range, bearing) to every tag in tag_map.
-      2. For each real observation, compute a Gaussian likelihood against each
-         tag's predicted measurement and SUM over the tags (multi-hypothesis).
-      3. Combine across observations in the frame.
+    sigma layout: [sigma_r, sigma_b]
+      sigma_r — std dev for range   (metres)
+      sigma_b — std dev for bearing (radians)
     """
-    raise NotImplementedError("Yahya: multi-hypothesis sensor model (sum over all tags)")
+    N = len(particles)
+    if not observations:
+        return np.ones(N)
+
+    if sigma is None:
+        sigma = np.array([0.3, 0.3])
+    sigma_r, sigma_b = sigma[0], sigma[1]
+
+    tags = tag_map.tags_xy          # (T, 2)
+    px = particles[:, 0]            # (N,)
+    py = particles[:, 1]
+    pth = particles[:, 2]
+
+    # predicted range/bearing from every particle to every tag — shape (N, T)
+    dx = tags[:, 0] - px[:, np.newaxis]   # (N, T)
+    dy = tags[:, 1] - py[:, np.newaxis]
+    pred_r = np.hypot(dx, dy)
+    pred_b = np.arctan2(dy, dx) - pth[:, np.newaxis]
+    pred_b = np.arctan2(np.sin(pred_b), np.cos(pred_b))   # wrap to (-pi, pi]
+
+    total = np.ones(N)
+    for r_obs, b_obs in observations:
+        dr = r_obs - pred_r                                # (N, T)
+        db = b_obs - pred_b
+        db = np.arctan2(np.sin(db), np.cos(db))           # wrap bearing diff
+
+        L = (np.exp(-0.5 * (dr / sigma_r) ** 2) *
+             np.exp(-0.5 * (db / sigma_b) ** 2))          # (N, T)
+        total *= L.sum(axis=1)                             # sum over tags → (N,)
+
+    return total

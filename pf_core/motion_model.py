@@ -25,7 +25,22 @@ def sample_motion(particles: np.ndarray, u: np.ndarray, dt: float,
     Returns:
         (N, 3) array of moved particles. theta should be wrapped to (-pi, pi].
 
-    TODO(Yahya): implement velocity-motion (or odometry-motion) model with
-    additive Gaussian noise. Document the noise parameters in the report.
+    noise layout: [sigma_v, sigma_omega]
+      sigma_v     — std dev added to linear velocity  (m/s)
+      sigma_omega — std dev added to angular velocity (rad/s)
     """
-    raise NotImplementedError("Yahya: motion model")
+    if noise is None:
+        noise = np.array([0.05, 0.05])
+    sigma_v, sigma_omega = noise[0], noise[1]
+    N = len(particles)
+
+    v_noisy = u[0] + rng.normal(0.0, sigma_v, N)
+    omega_noisy = u[1] + rng.normal(0.0, sigma_omega, N)
+
+    out = particles.copy()
+    theta = particles[:, 2]
+    out[:, 0] += v_noisy * np.cos(theta) * dt
+    out[:, 1] += v_noisy * np.sin(theta) * dt
+    out[:, 2] += omega_noisy * dt
+    out[:, 2] = np.arctan2(np.sin(out[:, 2]), np.cos(out[:, 2]))
+    return out

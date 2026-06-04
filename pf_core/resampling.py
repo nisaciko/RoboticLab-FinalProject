@@ -22,10 +22,18 @@ def low_variance_resample(particles: np.ndarray, weights: np.ndarray,
     Returns:
         (N, 3) array of resampled particles (weights become uniform afterwards).
 
-    TODO(Umay): implement the systematic resampling wheel (single uniform
-    offset r in [0, 1/N), step through the cumulative weights).
     """
-    raise NotImplementedError("Umay: low-variance resampling")
+    N = len(particles)
+    r = rng.uniform(0.0, 1.0 / N)
+    cumsum = np.cumsum(weights)
+    indices = np.empty(N, dtype=int)
+    i = 0
+    for m in range(N):
+        u = r + m / N
+        while u > cumsum[i]:
+            i += 1
+        indices[m] = i
+    return particles[indices]
 
 
 def effective_sample_size(weights: np.ndarray) -> float:

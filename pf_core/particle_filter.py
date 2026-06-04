@@ -35,10 +35,11 @@ class ParticleFilter:
         The robot starts at an UNKNOWN location, so the initial belief is a
         uniform prior over the free space.
 
-        TODO(Umay): sample x ~ U(x_range), y ~ U(y_range), theta ~ U(-pi, pi);
-        reset weights to uniform.
         """
-        raise NotImplementedError("Umay: uniform particle initialisation")
+        self.particles[:, 0] = self.rng.uniform(x_range[0], x_range[1], self.num_particles)
+        self.particles[:, 1] = self.rng.uniform(y_range[0], y_range[1], self.num_particles)
+        self.particles[:, 2] = self.rng.uniform(-np.pi, np.pi, self.num_particles)
+        self.weights[:] = 1.0 / self.num_particles
 
     # --- Bayesian filter steps ---------------------------------------------
     def predict(self, u, dt: float):
