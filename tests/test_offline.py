@@ -10,8 +10,6 @@ TDD target.
 from __future__ import annotations
 
 import numpy as np
-import pytest
-
 from pf_core.particle_filter import ParticleFilter
 from pf_core.tag_map import TagMap
 
@@ -48,7 +46,6 @@ def synthetic_observation(true_pose, tag_map, rng, sigma_r=0.05, sigma_b=0.03,
     return obs
 
 
-@pytest.mark.xfail(reason="pf_core not implemented yet (Yahya/3)", strict=False)
 def test_filter_converges_on_synthetic_run():
     rng = np.random.default_rng(0)
     tag_map = TagMap.default_room()
@@ -58,8 +55,12 @@ def test_filter_converges_on_synthetic_run():
     true_pose = np.array([1.0, 1.0, 0.0])
     v, omega, dt = 0.3, 0.2, 0.1
 
-    for _ in range(200):
-        # advance ground truth
+    print(f"\nStep 0   | true=({true_pose[0]:.2f}, {true_pose[1]:.2f}) "
+          f"| est=(-.-- , -.--) | err= -.-- m | particles spread across room")
+
+    log_steps = {20, 50, 100, 150, 199}
+
+    for step in range(200):
         true_pose = true_pose + np.array(
             [v * np.cos(true_pose[2]) * dt, v * np.sin(true_pose[2]) * dt, omega * dt])
         true_pose[2] = np.arctan2(np.sin(true_pose[2]), np.cos(true_pose[2]))
@@ -67,7 +68,13 @@ def test_filter_converges_on_synthetic_run():
         obs = synthetic_observation(true_pose, tag_map, rng)
         est = pf.step(u=np.array([v, omega]), dt=dt, observations=obs)
 
+        err = np.hypot(est[0] - true_pose[0], est[1] - true_pose[1])
+        print(f"Step {step+1:<4d} | true=({true_pose[0]:.2f}, {true_pose[1]:.2f}) "
+                f"| est=({est[0]:.2f}, {est[1]:.2f}) "
+                f"| err={err:.2f} m | tags seen this step: {len(obs)}")
+
     err = np.hypot(est[0] - true_pose[0], est[1] - true_pose[1])
+    print(f"\nFinal error: {err:.3f} m  ({'PASS' if err < 0.5 else 'FAIL'} threshold=0.5m)")
     assert err < 0.5, f"filter did not converge: position error {err:.2f} m"
 
 
