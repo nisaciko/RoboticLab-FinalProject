@@ -71,9 +71,13 @@ class AprilTagObsNode(Node):
         flat = []
         if ids is not None and len(corners):
             for tvec in _marker_tvecs(corners):
-                tx, _ty, tz = tvec       # camera frame: z forward, x right
+                tx, _ty, tz = tvec       # camera frame: z forward, x lateral
                 r = float(np.hypot(tx, tz))
-                b = float(np.arctan2(-tx, tz))          # left positive
+                # bearing positive = tag to the LEFT, to match the sensor model
+                # (pred_b = atan2(dy,dx)-theta). The Gazebo camera's optical x is
+                # such that +tx is already 'left' here — do NOT negate it, or the
+                # whole estimate comes out mirrored left-right.
+                b = float(np.arctan2(tx, tz))
                 b = float(np.arctan2(np.sin(b), np.cos(b)))
                 flat += [r, b]
 
