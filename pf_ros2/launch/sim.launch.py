@@ -56,6 +56,7 @@ def generate_launch_description():
                 '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
                 '/camera@sensor_msgs/msg/Image[gz.msgs.Image',
                 '/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
+                '/model/robot/pose@geometry_msgs/msg/PoseStamped[gz.msgs.Pose',  # ground truth
             ],
             output='screen'),
 

@@ -41,11 +41,13 @@ class VizNode(Node):
         self._particles: list = []
         self._odom_path: list[tuple] = []
         self._pf_path:   list[tuple] = []
+        self._true_xy = None          # ground-truth robot pose from Gazebo
 
         self.create_subscription(PoseArray,         "/pf/particles", self._cloud_cb,   10)
         self.create_subscription(Float32MultiArray, "/pf/weights",   self._weights_cb, 10)
         self.create_subscription(PoseStamped,       "/pf/pose",      self._pose_cb,    10)
         self.create_subscription(Odometry,          "/odom",         self._odom_cb,    10)
+        self.create_subscription(PoseStamped, "/model/robot/pose",   self._true_cb,    10)
 
         self._pub = self.create_publisher(MarkerArray, "/pf/viz", 10)
 
@@ -76,6 +78,9 @@ class VizNode(Node):
         self._odom_path.append(xy)
         if len(self._odom_path) > _MAX_PATH:
             self._odom_path.pop(0)
+
+    def _true_cb(self, msg: PoseStamped):
+        self._true_xy = (msg.pose.position.x, msg.pose.position.y)
 
     # ── publishers ────────────────────────────────────────────────────────────
 
@@ -145,6 +150,21 @@ class VizNode(Node):
             m.type = Marker.LINE_STRIP; m.action = Marker.ADD
             m.scale.x = 0.03; m.color = _col(0.0, 1.0, 0.3)
             m.points = [_pt(x, y) for x, y in self._pf_path]
+            ma.markers.append(m)
+
+        # GROUND TRUTH: the robot's true pose (big cyan sphere). The filter is
+        # correct only if the green high-weight cluster sits ON this sphere.
+        if self._true_xy is not None:
+            m = Marker()
+            m.header.stamp = stamp; m.header.frame_id = _FRAME
+            m.ns = "true_pose"; m.id = 0
+            m.type = Marker.SPHERE; m.action = Marker.ADD
+            m.pose.position.x = float(self._true_xy[0])
+            m.pose.position.y = float(self._true_xy[1])
+            m.pose.position.z = 0.1
+            m.pose.orientation.w = 1.0
+            m.scale.x = m.scale.y = m.scale.z = 0.35
+            m.color = _col(0.0, 0.9, 1.0, 0.9)   # cyan
             ma.markers.append(m)
 
         if ma.markers:
