@@ -29,7 +29,9 @@ class PfNode(Node):
 
         self._pf = ParticleFilter(
             tag_map,
-            num_particles=500,
+            # 5000 needed for reliable GLOBAL localization (uniform over the
+            # whole room); fewer lock onto a wrong/duplicate cluster early.
+            num_particles=5000,
             motion_noise=np.array([0.05, 0.05]),
             meas_noise=np.array([0.3, 0.3]),
             seed=42,
