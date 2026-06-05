@@ -1,23 +1,47 @@
 Panels:
   - Class: rviz_common/Displays
+    Help Height: 70
     Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+      Splitter Ratio: 0.5
+    Tree Height: 433
   - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
     Name: Views
+    Splitter Ratio: 0.5
 Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.5
+      Cell Size: 1
       Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
       Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
       Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
       Plane Cell Count: 12
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: PF cloud + tags + truth
-      Namespaces: {}
+      Namespaces:
+        odom_path: true
+        particles: true
+        pf_path: true
+        room: true
+        tags: true
+        true_pose: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -25,6 +49,7 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /pf/viz
       Value: true
+  Enabled: true
   Global Options:
     Background Color: 48; 48; 48
     Fixed Frame: odom
@@ -35,23 +60,43 @@ Visualization Manager:
     - Class: rviz_default_plugins/Select
     - Class: rviz_default_plugins/FocusCamera
     - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
       Distance: 12
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
       Focal Point:
         X: 0
         Y: 0
         Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
       Name: Current View
-      Pitch: 1.4
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 1.2647966146469116
       Target Frame: <Fixed Frame>
-      Yaw: 0.785
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 3.80000376701355
     Saved: ~
 Window Geometry:
-  Height: 820
-  Width: 1200
   Displays:
     collapsed: false
+  Height: 1016
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd00000001000000000000019b000003a2fc0200000002fb000000100044006900730070006c006100790073010000003b00000232000000c700fffffffb0000000a0056006900650077007301000002730000016a000000a000ffffff0000021f000003a200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
+  Width: 960
+  X: 0
+  Y: 27
