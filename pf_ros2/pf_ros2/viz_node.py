@@ -4,6 +4,9 @@
   - odometry-only trajectory (blue)
   - particle-filter pose-estimate trajectory (green)
 """
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..'))
+
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -12,13 +15,9 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32MultiArray, ColorRGBA
 from visualization_msgs.msg import Marker, MarkerArray
 
-_TAG_XY = [
-    [-2.94, -1.2], [-2.94,  0.8],
-    [ 2.94, -0.5], [ 2.94,  1.4],
-    [-2.00, -1.94], [1.00, -1.94],
-    [-1.00,  1.94], [1.80,  1.94],
-]
-_ROOM_CORNERS = [(-3, -2), (3, -2), (3, 2), (-3, 2), (-3, -2)]
+from pf_core.tag_map import TagMap as _TagMap
+_TAG_XY = _TagMap.default_room().tags_xy.tolist()
+_ROOM_CORNERS = [(-2.5, -2), (2.5, -2), (2.5, 2), (-2.5, 2), (-2.5, -2)]
 _FRAME = "odom"
 _MAX_PATH = 2000
 
@@ -105,7 +104,7 @@ class VizNode(Node):
             t.pose.position.y = float(ty)
             t.pose.position.z = 0.5
             t.pose.orientation.w = 1.0
-            t.scale.x = 0.05; t.scale.y = 0.2; t.scale.z = 0.2
+            t.scale.x = 0.05; t.scale.y = 0.4; t.scale.z = 0.4
             t.color = _col(1.0, 0.5, 0.0)
             ma.markers.append(t)
 

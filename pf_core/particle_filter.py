@@ -27,6 +27,8 @@ class ParticleFilter:
 
         self.particles = np.zeros((num_particles, 3))      # [x, y, theta]
         self.weights = np.full(num_particles, 1.0 / num_particles)
+        self._obs_update_count = 0   # resampling suppressed until this reaches _RESAMPLE_WARMUP
+        self._RESAMPLE_WARMUP = 150  # ~5 s at 30 Hz camera — let weights build before collapsing
 
     # --- initialisation -----------------------------------------------------
     def initialize_uniform(self, x_range, y_range):
@@ -36,6 +38,8 @@ class ParticleFilter:
         uniform prior over the free space.
 
         """
+        self._x_range = x_range
+        self._y_range = y_range
         self.particles[:, 0] = self.rng.uniform(x_range[0], x_range[1], self.num_particles)
         self.particles[:, 1] = self.rng.uniform(y_range[0], y_range[1], self.num_particles)
         self.particles[:, 2] = self.rng.uniform(-np.pi, np.pi, self.num_particles)
@@ -45,6 +49,12 @@ class ParticleFilter:
     def predict(self, u, dt: float):
         self.particles = motion_model.sample_motion(
             self.particles, u, dt, self.motion_noise, self.rng)
+        # Particles cannot pass through walls — clamp to room interior.
+        if hasattr(self, '_x_range'):
+            self.particles[:, 0] = np.clip(
+                self.particles[:, 0], self._x_range[0], self._x_range[1])
+            self.particles[:, 1] = np.clip(
+                self.particles[:, 1], self._y_range[0], self._y_range[1])
 
     def update(self, observations):
         """Reweight by the multi-hypothesis likelihood, then normalise."""
@@ -61,6 +71,12 @@ class ParticleFilter:
     def resample(self):
         self.particles = resampling.low_variance_resample(
             self.particles, self.weights, self.rng)
+
+        # Roughen: jitter so resampled duplicates diverge and the cloud
+        # can still escape a wrong hypothesis.
+        self.particles = resampling.roughen(
+            self.particles, xy_sigma=0.10, theta_sigma=0.05, rng=self.rng)
+
         self.weights[:] = 1.0 / self.num_particles
 
     def step(self, u, dt, observations, resample_threshold: float | None = None):
@@ -68,10 +84,12 @@ class ParticleFilter:
         self.predict(u, dt)
         if observations is not None:
             self.update(observations)
-            n_eff = resampling.effective_sample_size(self.weights)
-            thresh = resample_threshold or (self.num_particles / 2.0)
-            if n_eff < thresh:
-                self.resample()
+            self._obs_update_count += 1
+            if self._obs_update_count >= self._RESAMPLE_WARMUP:
+                n_eff = resampling.effective_sample_size(self.weights)
+                thresh = resample_threshold or (self.num_particles / 2.0)
+                if n_eff < thresh:
+                    self.resample()
         return self.estimate()
 
     # --- output -------------------------------------------------------------

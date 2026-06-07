@@ -36,6 +36,23 @@ def low_variance_resample(particles: np.ndarray, weights: np.ndarray,
     return particles[indices]
 
 
+def roughen(particles: np.ndarray, xy_sigma: float, theta_sigma: float,
+            rng: np.random.Generator) -> np.ndarray:
+    """Add small Gaussian jitter to prevent particle impoverishment.
+
+    Called immediately after low_variance_resample so that duplicate particles
+    diverge slightly. Without this, all resampled copies are identical and the
+    cloud collapses to a point after convergence, making recovery impossible.
+    """
+    out = particles.copy()
+    N = len(out)
+    out[:, 0] += rng.normal(0.0, xy_sigma, N)
+    out[:, 1] += rng.normal(0.0, xy_sigma, N)
+    out[:, 2] += rng.normal(0.0, theta_sigma, N)
+    out[:, 2] = np.arctan2(np.sin(out[:, 2]), np.cos(out[:, 2]))
+    return out
+
+
 def effective_sample_size(weights: np.ndarray) -> float:
     """N_eff = 1 / Σ w_i^2 — useful to decide *when* to resample."""
     w = np.asarray(weights, dtype=float)
