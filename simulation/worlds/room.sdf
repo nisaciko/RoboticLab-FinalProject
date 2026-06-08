@@ -147,7 +147,7 @@
     <include>
       <name>robot</name>
       <uri>model://robot</uri>
-      <pose>0 0 0.1 0 0 0</pose>
+      <pose>1.8 1.7 0.1 0 0 1.5708</pose>
     </include>
 
   </world>

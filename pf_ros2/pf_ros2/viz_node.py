@@ -19,7 +19,12 @@ from pf_core.tag_map import TagMap as _TagMap
 _TAG_XY = _TagMap.default_room().tags_xy.tolist()
 _ROOM_CORNERS = [(-2.5, -2), (2.5, -2), (2.5, 2), (-2.5, 2), (-2.5, -2)]
 _FRAME = "odom"
-_MAX_PATH = 2000
+_MAX_PATH = 200
+
+# Robot spawn pose in world frame — must match room.sdf <include><pose>
+_SPAWN_X   = 1.8
+_SPAWN_Y   = 1.7
+_SPAWN_YAW = np.pi / 2   # 1.5708 rad, facing +Y
 
 
 def _pt(x, y, z=0.0) -> Point:
@@ -40,7 +45,9 @@ class VizNode(Node):
         self._particles: list = []
         self._odom_path: list[tuple] = []
         self._pf_path:   list[tuple] = []
-        self._true_xy = None          # ground-truth robot pose from Gazebo
+        self._true_xy = None
+        self._odom_origin: tuple | None = None
+        self._robot_moved = False
 
         self.create_subscription(PoseArray,         "/pf/particles", self._cloud_cb,   10)
         self.create_subscription(Float32MultiArray, "/pf/weights",   self._weights_cb, 10)
@@ -67,13 +74,24 @@ class VizNode(Node):
         self._particles = msg.poses
 
     def _pose_cb(self, msg: PoseStamped):
+        if not self._robot_moved:
+            return
         xy = (msg.pose.position.x, msg.pose.position.y)
         self._pf_path.append(xy)
         if len(self._pf_path) > _MAX_PATH:
             self._pf_path.pop(0)
 
     def _odom_cb(self, msg: Odometry):
-        xy = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+        ox = msg.pose.pose.position.x
+        oy = msg.pose.pose.position.y
+        c, s = np.cos(_SPAWN_YAW), np.sin(_SPAWN_YAW)
+        xy = (_SPAWN_X + c * ox - s * oy, _SPAWN_Y + s * ox + c * oy)
+        if not self._robot_moved:
+            if self._odom_origin is None:
+                self._odom_origin = xy
+            elif (xy[0] - self._odom_origin[0]) ** 2 + (xy[1] - self._odom_origin[1]) ** 2 > 0.01:
+                self._robot_moved = True
+            return
         self._odom_path.append(xy)
         if len(self._odom_path) > _MAX_PATH:
             self._odom_path.pop(0)

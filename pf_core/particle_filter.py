@@ -27,8 +27,6 @@ class ParticleFilter:
 
         self.particles = np.zeros((num_particles, 3))      # [x, y, theta]
         self.weights = np.full(num_particles, 1.0 / num_particles)
-        self._obs_update_count = 0   # resampling suppressed until this reaches _RESAMPLE_WARMUP
-        self._RESAMPLE_WARMUP = 150  # ~5 s at 30 Hz camera — let weights build before collapsing
 
     # --- initialisation -----------------------------------------------------
     def initialize_uniform(self, x_range, y_range):
@@ -84,8 +82,7 @@ class ParticleFilter:
         self.predict(u, dt)
         if observations is not None:
             self.update(observations)
-            self._obs_update_count += 1
-            if self._obs_update_count >= self._RESAMPLE_WARMUP:
+            if observations:
                 n_eff = resampling.effective_sample_size(self.weights)
                 thresh = resample_threshold or (self.num_particles / 2.0)
                 if n_eff < thresh:
