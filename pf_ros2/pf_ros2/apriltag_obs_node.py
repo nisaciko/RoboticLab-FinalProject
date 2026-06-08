@@ -1,128 +1,135 @@
-"""Detect ArUco markers in the camera image and publish (range, bearing) observations."""
+"""Detect AprilTag (36h11) markers in the camera image and publish (range, bearing).
+
+Serves BOTH the Gazebo sim (raw sensor_msgs/Image) and the real Duckiebot
+(sensor_msgs/CompressedImage). The image topic, compression, camera intrinsics
+and tag size are ROS parameters — defaults match the sim; the Duckiebot launch
+overrides them. The filter core only consumes (range, bearing), so nothing else
+changes between sim and robot.
+"""
 import numpy as np
 import cv2
 import cv2.aruco as aruco
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from std_msgs.msg import Float32MultiArray
 
-# cv_bridge segfaults on NumPy 2.x — use the raw-bytes path unconditionally.
-_BRIDGE = None
-
-# Camera intrinsics from room.sdf: horizontal_fov=2.0 rad, 640x480
-_FX = 320.0 / np.tan(1.0)   # ~205.4 px
-_FY = _FX
-_CAM_MATRIX = np.array([[_FX, 0, 320.0],
-                         [0, _FY, 240.0],
-                         [0,  0,   1.0]], dtype=np.float64)
-_DIST = np.zeros((4, 1))
-
-# Physical size of the ArUco marker square (metres) — matches model.sdf box Y/Z.
-_TAG_SIZE = 0.4
-
-_DICT     = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
+_DICT     = aruco.getPredefinedDictionary(aruco.DICT_APRILTAG_36h11)  # the lab's physical tags
 _PARAMS   = aruco.DetectorParameters()
 _DETECTOR = aruco.ArucoDetector(_DICT, _PARAMS)
 
-# Corner object points: top-left, top-right, bottom-right, bottom-left (ArUco order).
-_OBJP = np.array([[-_TAG_SIZE / 2,  _TAG_SIZE / 2, 0],
-                  [ _TAG_SIZE / 2,  _TAG_SIZE / 2, 0],
-                  [ _TAG_SIZE / 2, -_TAG_SIZE / 2, 0],
-                  [-_TAG_SIZE / 2, -_TAG_SIZE / 2, 0]], dtype=np.float32)
+_DEBUG_SAVE_FRAME = 10   # dump one grayscale frame to /tmp to verify what the camera sees
 
-
-def _marker_tvecs(corners):
-    tvecs = []
-    for c in corners:
-        ok, _rvec, tvec = cv2.solvePnP(_OBJP, c[0], _CAM_MATRIX, _DIST,
-                                        flags=cv2.SOLVEPNP_IPPE_SQUARE)
-        if ok:
-            tvecs.append(tvec.reshape(3))
-    return tvecs
-
-
-_DEBUG_SAVE_FRAME = 10   # save a raw camera frame at this frame number for visual inspection
 
 class AprilTagObsNode(Node):
     def __init__(self):
         super().__init__("apriltag_obs_node")
+
+        # --- parameters (defaults match the Gazebo sim) ---
+        # sim intrinsics: horizontal_fov=2.0 rad, 640x480 -> fx = 320 / tan(1.0)
+        fx_default = 320.0 / np.tan(1.0)
+        self.declare_parameter("image_topic", "/camera")
+        self.declare_parameter("use_compressed", False)   # True for the Duckiebot camera
+        self.declare_parameter("tag_size", 0.4)           # metres (printed / sim tag side)
+        self.declare_parameter("fx", fx_default)
+        self.declare_parameter("fy", fx_default)
+        self.declare_parameter("cx", 320.0)
+        self.declare_parameter("cy", 240.0)
+
+        topic      = self.get_parameter("image_topic").value
+        compressed = bool(self.get_parameter("use_compressed").value)
+        ts         = float(self.get_parameter("tag_size").value)
+        fx = float(self.get_parameter("fx").value); fy = float(self.get_parameter("fy").value)
+        cx = float(self.get_parameter("cx").value); cy = float(self.get_parameter("cy").value)
+
+        self._cam_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1.0]], dtype=np.float64)
+        self._dist = np.zeros((4, 1))
+        # corner object points: top-left, top-right, bottom-right, bottom-left
+        self._objp = np.array([[-ts / 2,  ts / 2, 0], [ ts / 2,  ts / 2, 0],
+                               [ ts / 2, -ts / 2, 0], [-ts / 2, -ts / 2, 0]], dtype=np.float32)
+
         self._frame_count = 0
         self._detect_count = 0
         self._debug_saved = False
 
-        self.create_subscription(Image, "/camera", self._image_cb, 10)
+        if compressed:
+            self.create_subscription(CompressedImage, topic, self._compressed_cb, 10)
+        else:
+            self.create_subscription(Image, topic, self._image_cb, 10)
         self._pub = self.create_publisher(Float32MultiArray, "/observations", 10)
-        self.get_logger().info("apriltag_obs_node ready — waiting for /camera frames")
+        self.get_logger().info(
+            f"apriltag_obs_node ready — topic={topic} compressed={compressed} "
+            f"tag_size={ts} fx={fx:.1f} cx={cx} cy={cy}")
+
+    # --- image entry points ---
+    def _compressed_cb(self, msg: CompressedImage):
+        buf = np.frombuffer(msg.data, dtype=np.uint8)
+        gray = cv2.imdecode(buf, cv2.IMREAD_GRAYSCALE)
+        if gray is None:
+            self.get_logger().error("failed to decode CompressedImage")
+            return
+        self._process(gray, encoding="compressed")
 
     def _image_cb(self, msg: Image):
-        self._frame_count += 1
-
-        # --- decode image ---
         try:
             raw = np.frombuffer(msg.data, dtype=np.uint8)
-            n_ch = len(raw) // (msg.height * msg.width)
-            if n_ch == 0:
-                n_ch = 1
-            frame = raw.reshape(msg.height, msg.width, n_ch) if n_ch > 1 \
-                    else raw.reshape(msg.height, msg.width)
-            # encoding is rgb8 from Gazebo; for grayscale conversion channel order
-            # doesn't matter for B&W markers, but handle explicitly to be safe
-            if frame.ndim == 3:
-                if msg.encoding in ('rgb8', 'RGB8'):
-                    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-                else:
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            n_ch = max(1, len(raw) // (msg.height * msg.width))
+            if n_ch > 1:
+                frame = raw.reshape(msg.height, msg.width, n_ch)
+                code = cv2.COLOR_RGB2GRAY if msg.encoding in ('rgb8', 'RGB8') else cv2.COLOR_BGR2GRAY
+                gray = cv2.cvtColor(frame, code)
             else:
-                gray = frame
+                gray = raw.reshape(msg.height, msg.width)
         except Exception as e:
             self.get_logger().error(f"image decode error: {e}")
             return
+        self._process(gray, encoding=msg.encoding)
 
-        # --- save one frame to /tmp so we can visually verify what the camera sees ---
+    # --- detection + observation publishing ---
+    def _marker_tvecs(self, corners):
+        tvecs = []
+        for c in corners:
+            ok, _rvec, tvec = cv2.solvePnP(self._objp, c[0], self._cam_matrix, self._dist,
+                                           flags=cv2.SOLVEPNP_IPPE_SQUARE)
+            if ok:
+                tvecs.append(tvec.reshape(3))
+        return tvecs
+
+    def _process(self, gray, encoding=""):
+        self._frame_count += 1
+
+        # dump one frame so we can visually verify what the camera sees
         if self._frame_count == _DEBUG_SAVE_FRAME and not self._debug_saved:
             self._debug_saved = True
             try:
-                save_path = "/tmp/pf_camera_frame.png"
-                if frame.ndim == 3 and msg.encoding in ('rgb8', 'RGB8'):
-                    cv2.imwrite(save_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-                else:
-                    cv2.imwrite(save_path, frame)
-                self.get_logger().warn(
-                    f"DEBUG: saved frame {self._frame_count} → {save_path}  "
-                    f"(open with: eog {save_path}  or: xdg-open {save_path})")
+                cv2.imwrite("/tmp/pf_camera_frame.png", gray)
+                self.get_logger().warn("DEBUG: saved /tmp/pf_camera_frame.png "
+                                       "(open with: xdg-open /tmp/pf_camera_frame.png)")
             except Exception as e:
                 self.get_logger().error(f"frame save error: {e}")
 
-        # --- detect ---
         corners, ids, _ = _DETECTOR.detectMarkers(gray)
 
         flat = []
         if ids is not None and len(corners):
             self._detect_count += len(ids)
-            for tvec in _marker_tvecs(corners):
+            for tvec in self._marker_tvecs(corners):
                 tx, _ty, tz = tvec
                 if tz <= 0:
                     continue
                 r = float(np.hypot(tx, tz))
-                # Bearing: positive = tag to the LEFT of the robot heading.
-                # Gazebo camera facing +X: image-left = robot +Y (left).
-                # solvePnP camera frame X = image-right = robot -Y, so tx < 0
-                # when the tag is to the LEFT → negate to get positive bearing.
+                # bearing positive = tag to the LEFT of the robot heading.
+                # solvePnP camera X = image-right = robot -Y, so tx < 0 when the
+                # tag is to the LEFT → negate to get a positive bearing.
                 b = float(np.arctan2(-tx, tz))
                 b = float(np.arctan2(np.sin(b), np.cos(b)))
                 flat += [r, b]
 
-        # --- log every 30 frames ---
         if self._frame_count % 30 == 0:
-            n_det = len(flat) // 2
             self.get_logger().info(
-                f"[frame {self._frame_count}] encoding={msg.encoding} "
-                f"size={msg.width}x{msg.height} "
-                f"detections_this_frame={n_det} "
-                f"total_detections_so_far={self._detect_count}"
-            )
+                f"[frame {self._frame_count}] enc={encoding} "
+                f"detections_this_frame={len(flat) // 2} total={self._detect_count}")
 
         out = Float32MultiArray()
         out.data = flat

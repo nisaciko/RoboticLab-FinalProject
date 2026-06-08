@@ -40,8 +40,15 @@ with nothing but Python.
 
 ```bash
 sudo apt install -y python3-pip
-python3 -m pip install --upgrade numpy pytest
+# IMPORTANT: pin numpy < 2. ROS 2 Humble's OpenCV (cv2) is built against NumPy
+# 1.x, and NumPy 2.x makes `import cv2` crash with
+#   "AttributeError: _ARRAY_API not found / numpy.core.multiarray failed to import"
+# which kills apriltag_obs_node in the live sim.
+python3 -m pip install "numpy<2" pytest
 ```
+
+> If the ArUco node dies with the NumPy 1.x/2.x error above, run
+> `/usr/bin/python3 -m pip install "numpy<2"` and relaunch.
 
 Verify — run the offline tests from the repo root:
 

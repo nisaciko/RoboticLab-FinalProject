@@ -47,3 +47,20 @@ class TagMap:
             [-1.60, -1.94], [0.80, -1.94],  # front wall (y = -2)
             [ 0.20,  1.94], [-1.50,  1.94], # back wall  (y = +2)
         ]))
+
+    # --- REAL lab room (measured 2026-06-08): 1.24 x 0.80 m, origin at centre ---
+    LAB_BOUNDS = ((-0.62, 0.62), (-0.40, 0.40))  # (x_range, y_range) metres
+
+    @classmethod
+    def lab_room(cls) -> "TagMap":
+        """The 8 PHYSICAL tag positions in the real lab room (used on the
+        Duckiebot). tag36h11 with DIFFERENT IDs — the filter ignores IDs, only
+        positions matter. Rectangle 1.24 m (long) x 0.80 m (short), origin at the
+        centre: x along the long edges, y along the short edges. Tags are ~0.16 m
+        high (irrelevant to the 2D filter). Measured 2026-06-08."""
+        return cls(np.array([
+            [-0.32,  0.40], [0.08,  0.40],    # long edge "top"    (y = +0.40)
+            [-0.16, -0.40], [0.24, -0.40],    # long edge "bottom" (y = -0.40)
+            [-0.62, -0.15], [-0.62, 0.15],    # short edge "left"  (x = -0.62)
+            [ 0.62, -0.14], [ 0.62, 0.26],    # short edge "right" (x = +0.62)
+        ]))

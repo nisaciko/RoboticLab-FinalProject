@@ -13,7 +13,7 @@ import os
 import cv2
 import numpy as np
 
-DICT = cv2.aruco.DICT_4X4_50   # small, robust dictionary
+DICT = cv2.aruco.DICT_APRILTAG_36h11   # AprilTag 36h11 — matches the lab's physical tags
 MARKER_ID = 0                  # same ID on all 8 tags
 SIDE_PX = 600                  # marker resolution (excl. border)
 BORDER_PX = 100                # white quiet zone (REQUIRED for detection)
@@ -32,4 +32,4 @@ canvas[BORDER_PX:BORDER_PX + SIDE_PX, BORDER_PX:BORDER_PX + SIDE_PX] = marker
 
 cv2.imwrite(out_path, canvas)
 print(f"wrote {out_path}  ({canvas.shape[1]}x{canvas.shape[0]} px, "
-      f"DICT_4X4_50 id={MARKER_ID})")
+      f"DICT_APRILTAG_36h11 id={MARKER_ID})")
