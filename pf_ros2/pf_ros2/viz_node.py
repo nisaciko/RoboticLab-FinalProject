@@ -22,9 +22,9 @@ _FRAME = "odom"
 _MAX_PATH = 200
 
 # Robot spawn pose in world frame — must match room.sdf <include><pose>
-_SPAWN_X   = 1.8
-_SPAWN_Y   = 1.7
-_SPAWN_YAW = np.pi / 2   # 1.5708 rad, facing +Y
+_SPAWN_X   = 2.0
+_SPAWN_Y   = -1.5
+_SPAWN_YAW = -np.pi / 2   # -1.5708 rad, facing -Y
 
 
 def _pt(x, y, z=0.0) -> Point:

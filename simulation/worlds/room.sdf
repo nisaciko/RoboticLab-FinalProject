@@ -2,7 +2,7 @@
 <!--
   Particle Filter Localization - simulation world (Gazebo Harmonic / gz-sim 8).
 
-  Closed 5 x 4 m rectangular room (x in [-2.5,2.5], y in [-2,2]) with 8 AR-tag
+  Closed 5 x 4 m rectangular room (x in [-2.5,2.5], y in [-2,2], height 1.6 m) with 8 AR-tag
   markers (2 per wall, placed ASYMMETRICALLY) and a differential-drive robot
   with a forward-facing camera.
 
@@ -89,34 +89,34 @@
       </link>
     </model>
 
-    <!-- ============ ROOM: 4 walls, interior 5 x 4 m, height 1 m ============ -->
+    <!-- ============ ROOM: 4 walls, interior 5 x 4 m, height 1.6 m ============ -->
     <model name="room">
       <static>true</static>
       <link name="walls">
         <!-- left wall  (x = -2.5), right wall (x = +2.5) -->
-        <collision name="c_left"><pose>-2.5 0 0.5 0 0 0</pose>
-          <geometry><box><size>0.1 4 1</size></box></geometry></collision>
-        <visual name="v_left"><pose>-2.5 0 0.5 0 0 0</pose>
-          <geometry><box><size>0.1 4 1</size></box></geometry>
+        <collision name="c_left"><pose>-2.5 0 0.8 0 0 0</pose>
+          <geometry><box><size>0.1 4 1.6</size></box></geometry></collision>
+        <visual name="v_left"><pose>-2.5 0 0.8 0 0 0</pose>
+          <geometry><box><size>0.1 4 1.6</size></box></geometry>
           <material><ambient>0.7 0.7 0.75 1</ambient><diffuse>0.7 0.7 0.75 1</diffuse></material></visual>
 
-        <collision name="c_right"><pose>2.5 0 0.5 0 0 0</pose>
-          <geometry><box><size>0.1 4 1</size></box></geometry></collision>
-        <visual name="v_right"><pose>2.5 0 0.5 0 0 0</pose>
-          <geometry><box><size>0.1 4 1</size></box></geometry>
+        <collision name="c_right"><pose>2.5 0 0.8 0 0 0</pose>
+          <geometry><box><size>0.1 4 1.6</size></box></geometry></collision>
+        <visual name="v_right"><pose>2.5 0 0.8 0 0 0</pose>
+          <geometry><box><size>0.1 4 1.6</size></box></geometry>
           <material><ambient>0.7 0.7 0.75 1</ambient><diffuse>0.7 0.7 0.75 1</diffuse></material></visual>
 
         <!-- front wall (y = -2), back wall (y = +2) -->
-        <collision name="c_front"><pose>0 -2 0.5 0 0 0</pose>
-          <geometry><box><size>5 0.1 1</size></box></geometry></collision>
-        <visual name="v_front"><pose>0 -2 0.5 0 0 0</pose>
-          <geometry><box><size>5 0.1 1</size></box></geometry>
+        <collision name="c_front"><pose>0 -2 0.8 0 0 0</pose>
+          <geometry><box><size>5 0.1 1.6</size></box></geometry></collision>
+        <visual name="v_front"><pose>0 -2 0.8 0 0 0</pose>
+          <geometry><box><size>5 0.1 1.6</size></box></geometry>
           <material><ambient>0.7 0.7 0.75 1</ambient><diffuse>0.7 0.7 0.75 1</diffuse></material></visual>
 
-        <collision name="c_back"><pose>0 2 0.5 0 0 0</pose>
-          <geometry><box><size>5 0.1 1</size></box></geometry></collision>
-        <visual name="v_back"><pose>0 2 0.5 0 0 0</pose>
-          <geometry><box><size>5 0.1 1</size></box></geometry>
+        <collision name="c_back"><pose>0 2 0.8 0 0 0</pose>
+          <geometry><box><size>5 0.1 1.6</size></box></geometry></collision>
+        <visual name="v_back"><pose>0 2 0.8 0 0 0</pose>
+          <geometry><box><size>5 0.1 1.6</size></box></geometry>
           <material><ambient>0.7 0.7 0.75 1</ambient><diffuse>0.7 0.7 0.75 1</diffuse></material></visual>
       </link>
     </model>
@@ -129,17 +129,17 @@
          Min 180°-phantom distance between any tag and its counterpart: 0.7 m.
          No corner has two tags within 1 m (avoids corner-trap false conv).  -->
     <!-- LEFT wall x=-2.5 (face +x): yaw 0 -->
-    <include><name>tag1</name><uri>model://aruco_marker</uri><pose>-2.44 -1.2 0.65 0 0 0</pose></include>
-    <include><name>tag2</name><uri>model://aruco_marker</uri><pose>-2.44  0.8 0.40 0 0 0</pose></include>
+    <include><name>tag1</name><uri>model://aruco_marker</uri><pose>-2.44 -1.2 0.80 0 0 0</pose></include>
+    <include><name>tag2</name><uri>model://aruco_marker</uri><pose>-2.44  0.8 1.00 0 0 0</pose></include>
     <!-- RIGHT wall x=+2.5 (face -x): yaw pi -->
-    <include><name>tag3</name><uri>model://aruco_marker</uri><pose>2.44  0.3 0.55 0 0 3.14159</pose></include>
-    <include><name>tag4</name><uri>model://aruco_marker</uri><pose>2.44 -1.5 0.75 0 0 3.14159</pose></include>
+    <include><name>tag3</name><uri>model://aruco_marker</uri><pose>2.44  0.3 0.75 0 0 3.14159</pose></include>
+    <include><name>tag4</name><uri>model://aruco_marker</uri><pose>2.44 -1.5 1.05 0 0 3.14159</pose></include>
     <!-- FRONT wall y=-2 (face +y): yaw pi/2 -->
-    <include><name>tag5</name><uri>model://aruco_marker</uri><pose>-1.60 -1.94 0.45 0 0 1.5708</pose></include>
-    <include><name>tag6</name><uri>model://aruco_marker</uri><pose> 0.80 -1.94 0.62 0 0 1.5708</pose></include>
+    <include><name>tag5</name><uri>model://aruco_marker</uri><pose>-1.60 -1.94 0.70 0 0 1.5708</pose></include>
+    <include><name>tag6</name><uri>model://aruco_marker</uri><pose> 0.80 -1.94 0.90 0 0 1.5708</pose></include>
     <!-- BACK wall y=+2 (face -y): yaw -pi/2 -->
-    <include><name>tag7</name><uri>model://aruco_marker</uri><pose> 0.20  1.94 0.50 0 0 -1.5708</pose></include>
-    <include><name>tag8</name><uri>model://aruco_marker</uri><pose>-1.50  1.94 0.35 0 0 -1.5708</pose></include>
+    <include><name>tag7</name><uri>model://aruco_marker</uri><pose> 0.20  1.94 1.10 0 0 -1.5708</pose></include>
+    <include><name>tag8</name><uri>model://aruco_marker</uri><pose>-1.50  1.94 0.80 0 0 -1.5708</pose></include>
 
     <!-- ===================== DIFF-DRIVE ROBOT + CAMERA =====================
          Defined in simulation/models/robot/ (model.sdf). Spawn pose z = 0.1
@@ -147,7 +147,7 @@
     <include>
       <name>robot</name>
       <uri>model://robot</uri>
-      <pose>1.8 1.7 0.1 0 0 1.5708</pose>
+      <pose>2.0 -1.5 0.1 0 0 -1.5708</pose>
     </include>
 
   </world>

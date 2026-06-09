@@ -66,7 +66,7 @@ def main():
     # synthetic ground truth: a wide loop near the walls so the robot sees many
     # different tags over time (this is what breaks the symmetry and lets the
     # cloud collapse to the true pose). radius = v / omega.
-    true_pose = np.array([2.0, 0.0, np.pi / 2])
+    true_pose = np.array([2.0, -1.5, -np.pi / 2])
     odom_pose = true_pose.copy()          # dead-reckoning (drifts), "odometry only"
     v, omega, dt = 0.5, 0.25, 0.1         # radius 2.0 m loop
 
