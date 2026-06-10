@@ -58,9 +58,12 @@ class DuckiebotPF(object):
         self.tags_xy = tag_map.tags_xy
         (xlo, xhi), (ylo, yhi) = TagMap.LAB_BOUNDS
         self.room = [(xlo, ylo), (xhi, ylo), (xhi, yhi), (xlo, yhi), (xlo, ylo)]
+        # Noise tuned for the SMALL real room (~0.9 m): tag distances are 0.3–0.9 m,
+        # so the sim's 0.3 m range noise was far too loose to localise. Tighter
+        # noise = the filter trusts detections more = the cloud actually collapses.
         self.pf = ParticleFilter(tag_map, num_particles=5000,
-                                 motion_noise=np.array([0.05, 0.05]),
-                                 meas_noise=np.array([0.3, 0.3]), seed=42)
+                                 motion_noise=np.array([0.03, 0.05]),
+                                 meas_noise=np.array([0.06, 0.10]), seed=42)
         self.pf.initialize_uniform(x_range=(xlo, xhi), y_range=(ylo, yhi))
 
         ts = self.tag_size
@@ -74,6 +77,8 @@ class DuckiebotPF(object):
         self.latest_omega = 0.0
         self.last_t = None
         self.odom_path = []
+        self.latest_odom = None      # (x, y, theta) from velocity_to_pose
+        self.anchor = None           # (ox0,oy0,oth0, ex0,ey0,eth0) set once the cloud converges
         self.pf_path = []
         self.frame_count = 0
         self.detect_count = 0
@@ -154,7 +159,18 @@ class DuckiebotPF(object):
         if len(self.pf_path) > 2000:
             self.pf_path.pop(0)
 
+        # Once the cloud has converged, freeze an anchor that maps the odom frame
+        # onto the map at this instant — so the displayed odom path starts on the
+        # filter estimate and its later drift is visible.
+        if self.anchor is None and self.latest_odom is not None:
+            if float(np.std(self.pf.particles[:, :2])) < 0.12:
+                ox, oy, oth = self.latest_odom
+                self.anchor = (ox, oy, oth,
+                               float(self.est[0]), float(self.est[1]), float(self.est[2]))
+                rospy.loginfo("odom path anchored to filter estimate (cloud converged)")
+
     def _pose_cb(self, msg):
+        self.latest_odom = (msg.x, msg.y, msg.theta)
         self.odom_path.append((msg.x, msg.y))
         if len(self.odom_path) > 2000:
             self.odom_path.pop(0)
@@ -171,7 +187,7 @@ class DuckiebotPF(object):
             m.scale.x = sx; m.pose.orientation.w = 1.0
             return m
 
-        room = base("room", 0, Marker.LINE_STRIP, 0.03)
+        room = base("room", 0, Marker.LINE_STRIP, 0.01)
         room.color = _col(0.8, 0.8, 0.8)
         room.points = [_pt(x, y) for x, y in self.room]
         ma.markers.append(room)
@@ -191,14 +207,21 @@ class DuckiebotPF(object):
             pc.colors.append(_col(1.0 - tnorm, tnorm, 0.0, 0.8))
         ma.markers.append(pc)
 
-        if len(self.odom_path) > 1:
-            op = base("odom_path", 0, Marker.LINE_STRIP, 0.03)
+        # odometry-only path, rigidly aligned to the filter at the convergence
+        # moment (anchor) so both start together and the odom DRIFT is visible.
+        if self.anchor is not None and len(self.odom_path) > 1:
+            ox0, oy0, oth0, ex0, ey0, eth0 = self.anchor
+            dth = eth0 - oth0
+            c, s = np.cos(dth), np.sin(dth)
+            op = base("odom_path", 0, Marker.LINE_STRIP, 0.006)
             op.color = _col(0.2, 0.4, 1.0)
-            op.points = [_pt(x, y) for x, y in self.odom_path]
+            for ox, oy in self.odom_path:
+                dx, dy = ox - ox0, oy - oy0
+                op.points.append(_pt(ex0 + c * dx - s * dy, ey0 + s * dx + c * dy))
             ma.markers.append(op)
 
         if len(self.pf_path) > 1:
-            pp = base("pf_path", 0, Marker.LINE_STRIP, 0.03)
+            pp = base("pf_path", 0, Marker.LINE_STRIP, 0.006)
             pp.color = _col(0.0, 1.0, 0.3)
             pp.points = [_pt(x, y) for x, y in self.pf_path]
             ma.markers.append(pp)
