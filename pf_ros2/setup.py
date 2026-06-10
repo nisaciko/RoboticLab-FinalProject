@@ -27,6 +27,7 @@ setup(
             "pf_node = pf_ros2.pf_node:main",
             "apriltag_obs_node = pf_ros2.apriltag_obs_node:main",
             "viz_node = pf_ros2.viz_node:main",
+            "keyboard_teleop = pf_ros2.keyboard_teleop:main",
         ],
     },
 )

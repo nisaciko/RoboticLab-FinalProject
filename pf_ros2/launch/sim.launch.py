@@ -67,4 +67,14 @@ def generate_launch_description():
              output='screen'),
         Node(package='pf_ros2', executable='viz_node', name='viz',
              output='screen'),
+
+        # Keyboard teleop — opens in its own xterm window.
+        # Hold arrow keys or WASD to drive; release to stop.
+        Node(
+            package='pf_ros2',
+            executable='keyboard_teleop',
+            name='teleop',
+            output='screen',
+            prefix='xterm -e',
+        ),
     ])

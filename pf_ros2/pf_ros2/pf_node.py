@@ -29,11 +29,9 @@ class PfNode(Node):
 
         self._pf = ParticleFilter(
             tag_map,
-            # 5000 needed for reliable GLOBAL localization (uniform over the
-            # whole room); fewer lock onto a wrong/duplicate cluster early.
-            num_particles=5000,
-            motion_noise=np.array([0.05, 0.05]),
-            meas_noise=np.array([0.3, 0.3]),
+            num_particles=8000,
+            motion_noise=np.array([0.1, 0.05]),
+            meas_noise=np.array([0.30, 0.18]),
             seed=42,
         )
         self._pf.initialize_uniform(x_range=x_range, y_range=y_range)
@@ -55,6 +53,10 @@ class PfNode(Node):
     def _obs_cb(self, msg: Float32MultiArray):
         d = msg.data
         self._pending_obs = [(d[i], d[i + 1]) for i in range(0, len(d), 2)]
+        if self._pending_obs:
+            self.get_logger().info(
+                f"obs received: {len(self._pending_obs)} tag(s) — "
+                + ", ".join(f"r={r:.2f} b={b:.2f}" for r, b in self._pending_obs))
 
     def _odom_cb(self, msg: Odometry):
         now = self.get_clock().now().nanoseconds * 1e-9
@@ -74,6 +76,13 @@ class PfNode(Node):
         self._pending_obs = None
 
         est = self._pf.step(u=np.array([v, omega]), dt=dt, observations=obs)
+
+        if obs:
+            from pf_core.resampling import effective_sample_size
+            n_eff = effective_sample_size(self._pf.weights)
+            self.get_logger().info(
+                f"n_eff={n_eff:.0f}/{self._pf.num_particles} "
+                f"est=({est[0]:.2f},{est[1]:.2f},{np.degrees(est[2]):.1f}°)")
 
         self._publish_pose(est, msg.header.stamp)
         self._publish_cloud(msg.header.stamp)

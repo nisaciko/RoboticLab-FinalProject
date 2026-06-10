@@ -14,8 +14,15 @@
                  <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
       </inertial>
       <collision name="col"><geometry><box><size>0.4 0.3 0.15</size></box></geometry></collision>
+      <!-- main body — blue -->
       <visual name="vis"><geometry><box><size>0.4 0.3 0.15</size></box></geometry>
         <material><ambient>0.1 0.3 0.8 1</ambient><diffuse>0.1 0.3 0.8 1</diffuse></material></visual>
+      <!-- orange nose bump — marks the forward (+X) face -->
+      <visual name="nose">
+        <pose>0.23 0 0 0 0 0</pose>
+        <geometry><box><size>0.06 0.14 0.08</size></box></geometry>
+        <material><ambient>1.0 0.45 0.0 1</ambient><diffuse>1.0 0.45 0.0 1</diffuse></material>
+      </visual>
 
       <!-- forward-facing camera at the front of the chassis -->
       <sensor name="camera" type="camera">

@@ -4,6 +4,9 @@
   - odometry-only trajectory (blue)
   - particle-filter pose-estimate trajectory (green)
 """
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..'))
+
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -12,15 +15,16 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32MultiArray, ColorRGBA
 from visualization_msgs.msg import Marker, MarkerArray
 
-_TAG_XY = [
-    [-2.94, -1.2], [-2.94,  0.8],
-    [ 2.94, -0.5], [ 2.94,  1.4],
-    [-2.00, -1.94], [1.00, -1.94],
-    [-1.00,  1.94], [1.80,  1.94],
-]
-_ROOM_CORNERS = [(-3, -2), (3, -2), (3, 2), (-3, 2), (-3, -2)]
+from pf_core.tag_map import TagMap as _TagMap
+_TAG_XY = _TagMap.default_room().tags_xy.tolist()
+_ROOM_CORNERS = [(-2.5, -2), (2.5, -2), (2.5, 2), (-2.5, 2), (-2.5, -2)]
 _FRAME = "odom"
-_MAX_PATH = 2000
+_MAX_PATH = 200
+
+# Robot spawn pose in world frame — must match room.sdf <include><pose>
+_SPAWN_X   = 2.0
+_SPAWN_Y   = -1.5
+_SPAWN_YAW = -np.pi / 2   # -1.5708 rad, facing -Y
 
 
 def _pt(x, y, z=0.0) -> Point:
@@ -41,7 +45,9 @@ class VizNode(Node):
         self._particles: list = []
         self._odom_path: list[tuple] = []
         self._pf_path:   list[tuple] = []
-        self._true_xy = None          # ground-truth robot pose from Gazebo
+        self._true_xy = None
+        self._odom_origin: tuple | None = None
+        self._robot_moved = False
 
         self.create_subscription(PoseArray,         "/pf/particles", self._cloud_cb,   10)
         self.create_subscription(Float32MultiArray, "/pf/weights",   self._weights_cb, 10)
@@ -68,13 +74,24 @@ class VizNode(Node):
         self._particles = msg.poses
 
     def _pose_cb(self, msg: PoseStamped):
+        if not self._robot_moved:
+            return
         xy = (msg.pose.position.x, msg.pose.position.y)
         self._pf_path.append(xy)
         if len(self._pf_path) > _MAX_PATH:
             self._pf_path.pop(0)
 
     def _odom_cb(self, msg: Odometry):
-        xy = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+        ox = msg.pose.pose.position.x
+        oy = msg.pose.pose.position.y
+        c, s = np.cos(_SPAWN_YAW), np.sin(_SPAWN_YAW)
+        xy = (_SPAWN_X + c * ox - s * oy, _SPAWN_Y + s * ox + c * oy)
+        if not self._robot_moved:
+            if self._odom_origin is None:
+                self._odom_origin = xy
+            elif (xy[0] - self._odom_origin[0]) ** 2 + (xy[1] - self._odom_origin[1]) ** 2 > 0.01:
+                self._robot_moved = True
+            return
         self._odom_path.append(xy)
         if len(self._odom_path) > _MAX_PATH:
             self._odom_path.pop(0)
@@ -105,7 +122,7 @@ class VizNode(Node):
             t.pose.position.y = float(ty)
             t.pose.position.z = 0.5
             t.pose.orientation.w = 1.0
-            t.scale.x = 0.05; t.scale.y = 0.2; t.scale.z = 0.2
+            t.scale.x = 0.05; t.scale.y = 0.4; t.scale.z = 0.4
             t.color = _col(1.0, 0.5, 0.0)
             ma.markers.append(t)
 

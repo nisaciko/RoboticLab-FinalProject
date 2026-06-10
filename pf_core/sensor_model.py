@@ -43,6 +43,11 @@ def observation_likelihood(particles: np.ndarray, observations, tag_map,
         sigma = np.array([0.3, 0.3])
     sigma_r, sigma_b = sigma[0], sigma[1]
 
+    # Camera half-FOV = hfov/2 = 2.0/2 = 1.0 rad (~57°).
+    # A tag outside this cone is physically behind the camera and cannot be
+    # the source of the detection — exclude it from the likelihood sum.
+    _HALF_FOV = 1.0
+
     tags = tag_map.tags_xy          # (T, 2)
     px = particles[:, 0]            # (N,)
     py = particles[:, 1]
@@ -55,6 +60,9 @@ def observation_likelihood(particles: np.ndarray, observations, tag_map,
     pred_b = np.arctan2(dy, dx) - pth[:, np.newaxis]
     pred_b = np.arctan2(np.sin(pred_b), np.cos(pred_b))   # wrap to (-pi, pi]
 
+    # FOV mask: True where a tag is within the camera's field of view (N, T)
+    in_fov = np.abs(pred_b) <= _HALF_FOV
+
     total = np.ones(N)
     for r_obs, b_obs in observations:
         dr = r_obs - pred_r                                # (N, T)
@@ -62,7 +70,11 @@ def observation_likelihood(particles: np.ndarray, observations, tag_map,
         db = np.arctan2(np.sin(db), np.cos(db))           # wrap bearing diff
 
         L = (np.exp(-0.5 * (dr / sigma_r) ** 2) *
-             np.exp(-0.5 * (db / sigma_b) ** 2))          # (N, T)
-        total *= L.sum(axis=1)                             # sum over tags → (N,)
+             np.exp(-0.5 * (db / sigma_b) ** 2) *
+             in_fov)                                       # (N, T)
+
+        # Floor prevents complete underflow when no in-FOV tag matches well.
+        L_sum = np.maximum(L.sum(axis=1), 1e-300)         # (N,)
+        total *= L_sum
 
     return total

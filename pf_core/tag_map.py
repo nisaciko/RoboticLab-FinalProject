@@ -29,19 +29,21 @@ class TagMap:
     def num_tags(self) -> int:
         return self.tags_xy.shape[0]
 
-    # Room is centred at the origin: x in [-3, 3], y in [-2, 2] (interior 6 x 4 m).
-    ROOM_BOUNDS = ((-3.0, 3.0), (-2.0, 2.0))  # (x_range, y_range)
+    # Room is centred at the origin: x in [-2.5, 2.5], y in [-2, 2] (interior 5 x 4 m).
+    ROOM_BOUNDS = ((-2.5, 2.5), (-2.0, 2.0))  # (x_range, y_range)
 
     @classmethod
     def default_room(cls) -> "TagMap":
         """The 8-tag asymmetric layout — MUST match simulation/worlds/room.sdf.
 
-        2 tags per wall, intentionally asymmetric (no wall mirrors another), so
-        the configuration is locally unique and the filter can converge.
+        2 tags per wall, intentionally asymmetric. Minimum 180°-phantom distance
+        between any tag and its rotational counterpart is 0.7 m, preventing the
+        filter from false-converging to a 180°-rotated position.
+        No corner has two tags within 1 m — avoids corner-trap false convergence.
         """
         return cls(np.array([
-            [-2.94, -1.2], [-2.94, 0.8],   # left wall  (x = -3)
-            [ 2.94, -0.5], [ 2.94, 1.4],   # right wall (x = +3)
-            [-2.00, -1.94], [1.00, -1.94], # front wall (y = -2)
-            [-1.00,  1.94], [1.80,  1.94], # back wall  (y = +2)
+            [-2.44, -1.2], [-2.44,  0.8],   # left wall  (x = -2.5)
+            [ 2.44,  0.3], [ 2.44, -1.5],   # right wall (x = +2.5)
+            [-1.60, -1.94], [0.80, -1.94],  # front wall (y = -2)
+            [ 0.20,  1.94], [-1.50,  1.94], # back wall  (y = +2)
         ]))
