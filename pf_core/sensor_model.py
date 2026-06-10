@@ -43,10 +43,12 @@ def observation_likelihood(particles: np.ndarray, observations, tag_map,
         sigma = np.array([0.3, 0.3])
     sigma_r, sigma_b = sigma[0], sigma[1]
 
-    # Camera half-FOV = hfov/2 = 2.0/2 = 1.0 rad (~57°).
-    # A tag outside this cone is physically behind the camera and cannot be
-    # the source of the detection — exclude it from the likelihood sum.
-    _HALF_FOV = 1.0
+    # Half field-of-view of the camera. The real Duckiebot uses a WIDE fisheye
+    # (~160°), so a centre robot sees wall tags at large bearings (±70-90°). The
+    # old narrow value (1.0 rad ~57°, from the sim camera) excluded those tags,
+    # which made the filter favour edge/corner particles (tags appear "ahead"
+    # there) and biased the estimate to the walls. Use the front hemisphere.
+    _HALF_FOV = np.pi / 2   # ~90°
 
     tags = tag_map.tags_xy          # (T, 2)
     px = particles[:, 0]            # (N,)
